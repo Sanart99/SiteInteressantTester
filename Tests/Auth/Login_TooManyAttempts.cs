@@ -20,7 +20,7 @@ namespace SiteInteressantTester.Tests.Auth {
                 IAlert alert = driver.SwitchTo().Alert();
                 string text = alert.Text;
                 
-                if (text.StartsWith("[NOTFOUND]")) { alert.Accept(); continue; }
+                if (text.StartsWith("[NOT_FOUND]")) { alert.Accept(); continue; }
                 else if (text.StartsWith("[PROHIBITED]")) return true;
                 else { Console.WriteLine($"Unknown message: {text}"); return false; }
             }

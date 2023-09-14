@@ -13,7 +13,7 @@ namespace SiteInteressantTester.Tests.Auth {
             pageHome.ConnexionForm.EnterCredentials("UserTest1","incorrectpassword",true);
             wait.Until(d => driver.SwitchTo().Alert() != null);
 
-            return driver.SwitchTo().Alert().Text.StartsWith("[NOTFOUND]");
+            return driver.SwitchTo().Alert().Text.StartsWith("[NOT_FOUND]");
         }
     }
 }
