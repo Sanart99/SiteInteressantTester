@@ -1,0 +1,34 @@
+name: Build
+
+on:
+  push:
+    branches: [ "**" ]
+  pull_request:
+    branches: [ "**" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '7.0.x'
+      
+      - name: Build
+        run: dotnet build -c Release
+
+      - name: Set permissions
+        run: |
+          chmod -R 777 bin
+          cd bin/Release/net7.0
+          ls -lh
+
+      - name: Upload
+        uses: actions/upload-artifact@v3
+        with:
+          name: release
+          path: bin/Release/net7.0
