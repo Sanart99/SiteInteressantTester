@@ -14,10 +14,10 @@ namespace SiteInteressantTester {
         public static int BrowserHeight { get; private set; } = 1000;
         public static bool Logging { get; private set; } = false;
 
-        public static void Main(string[] args) {
+        public static int Main(string[] args) {
             if (!args.Contains("-all")) {
                 Console.WriteLine("Use '-all' to run all tests.");
-                return;
+                return 0;
             }
 
             foreach (string arg in args) {
@@ -46,7 +46,7 @@ namespace SiteInteressantTester {
             firefoxArgs.Add($"-width={BrowserWidth}");
             firefoxArgs.Add($"-height={BrowserHeight}");
 
-            if (!IsServerInTestMode()) { Console.WriteLine("Server isn't in test mode."); return; }
+            if (!IsServerInTestMode()) { Console.WriteLine("Server isn't in test mode."); return 1; }
             DBInit(false);
 
             List<ITest> tests = new();
@@ -65,6 +65,7 @@ namespace SiteInteressantTester {
             string logDir = $"logs/chrome/${sNow}";
             if (Logging) Directory.CreateDirectory(logDir);
 
+            bool errorEncountered = false;
             foreach (ITest test in tests) {
                 string testName = test.GetType().Name;
                 Console.WriteLine("---------------------------");
@@ -72,9 +73,8 @@ namespace SiteInteressantTester {
                 Console.WriteLine($"Testing : {testName}");
                 Console.ForegroundColor = ConsoleColor.White;
 
-                bool stopTest = false;
                 for (int i=0; i<2; i++) {
-                    if (!IsServerInTestMode()) { Console.WriteLine("Server isn't in test mode."); stopTest = true; break; }
+                    if (!IsServerInTestMode()) { Console.WriteLine("Server isn't in test mode."); errorEncountered = true; break; }
                     DBInit();
 
                     string driverName = driverNames[i];
@@ -110,9 +110,9 @@ namespace SiteInteressantTester {
 
                     driver.Quit();
 
-                    if (!bResult) { stopTest = true; break; }
+                    if (!bResult) { errorEncountered = true; break; }
                 }
-                if (stopTest) break;
+                if (errorEncountered) break;
             }
             Console.WriteLine("---------------------------\n");
 
@@ -122,7 +122,7 @@ namespace SiteInteressantTester {
             }
             Console.ForegroundColor = ConsoleColor.White;
 
-            return;
+            return errorEncountered ? 1 : 0;
         }
 
         private static void SwitchColorFromResult(string s) {
