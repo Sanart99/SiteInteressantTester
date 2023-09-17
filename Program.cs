@@ -5,14 +5,46 @@ using OpenQA.Selenium.Firefox;
 using SiteInteressantTester.Test;
 using System.Reflection;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace SiteInteressantTester {
     internal class Program {
+        public static bool Headless { get; private set; } = false;
+        public static int BrowserWidth { get; private set; } = 1000;
+        public static int BrowserHeight { get; private set; } = 1000;
+        public static bool Logging { get; private set; } = false;
+
         public static void Main(string[] args) {
-            if (args.Length == 0  || args[0] != "-all") {
-                Console.WriteLine("This only runs with '-all' for now.");
+            if (!args.Contains("-all")) {
+                Console.WriteLine("Use '-all' to run all tests.");
                 return;
             }
+
+            foreach (string arg in args) {
+                switch (arg) {
+                    case "-headless":
+                        Headless = true;
+                        break;
+                    case "-log":
+                        Logging = true;
+                        break;
+                    case var _ when new Regex(@"^-width=\d+$").IsMatch(arg):
+                        BrowserWidth = int.Parse(new Regex(@"^-width=(\d+)$").Match(arg).Groups[1].Value);
+                        break;
+                    case var _ when new Regex(@"^-height=\d+$").IsMatch(arg):
+                        BrowserHeight = int.Parse(new Regex(@"^-height=(\d+)$").Match(arg).Groups[1].Value);
+                        break;
+                }
+            }
+
+            List<string> chromeArgs = new();
+            if (Headless) chromeArgs.Add("--headless");
+            chromeArgs.Add($"--window-size={BrowserWidth},{BrowserHeight}");
+
+            List<string> firefoxArgs = new();
+            if (Headless) firefoxArgs.Add("-headless");
+            firefoxArgs.Add($"-width={BrowserWidth}");
+            firefoxArgs.Add($"-height={BrowserHeight}");
 
             if (!IsServerInTestMode()) { Console.WriteLine("Server isn't in test mode."); return; }
             DBInit(false);
@@ -29,6 +61,10 @@ namespace SiteInteressantTester {
             Type[] driverTypes = new Type[] { typeof(ChromeDriver), typeof(FirefoxDriver) };
             List<(string,string,string)> testResults = new();
 
+            string sNow = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss-ffff");
+            string logDir = $"logs/chrome/${sNow}";
+            if (Logging) Directory.CreateDirectory(logDir);
+
             foreach (ITest test in tests) {
                 string testName = test.GetType().Name;
                 Console.WriteLine("---------------------------");
@@ -43,7 +79,22 @@ namespace SiteInteressantTester {
 
                     string driverName = driverNames[i];
                     Console.WriteLine($"\n***** {driverName} *****");
-                    driver = (WebDriver)Activator.CreateInstance(driverTypes[i])!;
+                    switch (driverTypes[i]) {
+                        case var v when v == typeof(ChromeDriver):
+                            ChromeOptions optChrome = new ChromeOptions();
+                            optChrome.AddArguments(chromeArgs);
+                            ChromeDriverService chromeSvc = ChromeDriverService.CreateDefaultService();
+                            if (Logging) chromeSvc.LogPath = $"{logDir}/{testName}.txt";
+                            driver = (ChromeDriver)Activator.CreateInstance(driverTypes[i],new object[] { chromeSvc, optChrome })!;
+                            break;
+                        case var v when v == typeof(FirefoxDriver):
+                            FirefoxOptions optFirefox = new FirefoxOptions();
+                            optFirefox.AddArguments(firefoxArgs);
+                            if (Logging) optFirefox.LogLevel = FirefoxDriverLogLevel.Trace;
+                            driver = (FirefoxDriver)Activator.CreateInstance(driverTypes[i],new object[] { optFirefox })!;
+                            break;
+                        default: throw new Exception("Unknown driver.");
+                    }
 
                     bool bResult = false;
                     try { bResult = test.Exec(driver); }

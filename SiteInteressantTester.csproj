@@ -4,7 +4,7 @@
 		<TargetFramework>net7.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
-		<StartArguments>-all</StartArguments>
+		<StartArguments>-all -headless -width=1000 -height=1000 -log</StartArguments>
 	  
 		<NoWarn>$(NoWarn);NU1803</NoWarn>
 	</PropertyGroup>
