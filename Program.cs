@@ -46,8 +46,8 @@ namespace SiteInteressantTester {
             firefoxArgs.Add($"-width={BrowserWidth}");
             firefoxArgs.Add($"-height={BrowserHeight}");
 
-            if (!IsServerInTestMode()) { Console.WriteLine("Server isn't in test mode."); return 1; }
-            DBInit(false);
+            if (!API.IsServerInTestMode()) { Console.WriteLine("Server isn't in test mode."); return 1; }
+            DBInit(true);
 
             List<ITest> tests = new();
             IEnumerable<Type> types = Assembly.GetExecutingAssembly().GetTypes().Where(t => t.Namespace?.StartsWith("SiteInteressantTester.Test") ?? false);
@@ -68,13 +68,11 @@ namespace SiteInteressantTester {
             bool errorEncountered = false;
             foreach (ITest test in tests) {
                 string testName = test.GetType().Name;
-                Console.WriteLine("---------------------------");
-                Console.ForegroundColor = ConsoleColor.Magenta;
-                Console.WriteLine($"Testing : {testName}");
-                Console.ForegroundColor = ConsoleColor.White;
+                Console.WriteLine("\n---------------------------");
+                GClass.WriteColoredLine($"Testing : {testName}\n", ConsoleColor.Magenta);
 
                 for (int i=0; i<2; i++) {
-                    if (!IsServerInTestMode()) { Console.WriteLine("Server isn't in test mode."); errorEncountered = true; break; }
+                    if (!API.IsServerInTestMode()) { Console.WriteLine("Server isn't in test mode."); errorEncountered = true; break; }
                     DBInit();
 
                     string driverName = driverNames[i];
@@ -103,7 +101,7 @@ namespace SiteInteressantTester {
                     string sResult = (bResult ? "SUCCESS" : "FAILURE");
                     
                     SwitchColorFromResult(sResult);
-                    Console.WriteLine($"\nResult : {sResult}");
+                    Console.WriteLine($"\nResult : {sResult}\n");
                     Console.ForegroundColor = ConsoleColor.White;
 
                     testResults.Add((testName,driverName,sResult));
@@ -114,7 +112,7 @@ namespace SiteInteressantTester {
                 }
                 if (errorEncountered) break;
             }
-            Console.WriteLine("---------------------------\n");
+            Console.WriteLine("\n---------------------------\n");
 
             foreach ((string testName,string driverName, string testResult)tr in testResults) {
                 SwitchColorFromResult(tr.testResult);
@@ -133,19 +131,10 @@ namespace SiteInteressantTester {
             };
         }
 
-        private static bool IsServerInTestMode() {
-            var res = GClass.Http.PostAsync($"{GClass.GetRoot("api")}/graphql.php", new MultipartFormDataContent() {
-                { new StringContent("""{ "query": "query { testMode }" }"""), "gqlQuery" }
-            });
-            res.Wait();
-            var res2 = res.Result.Content.ReadAsStringAsync();
-            res2.Wait();
-            GQLResponse? v = JsonSerializer.Deserialize<GQLResponse>(res2.Result, new JsonSerializerOptions() {PropertyNameCaseInsensitive = true});
+        internal static void DBInit(bool verbose = false) {
+            static void Log(string s) { GClass.WriteColoredLine($"[DB] {s}",ConsoleColor.Cyan); }
 
-            return v?.Data?.TestMode == true;
-        }
-
-        internal static void DBInit(bool silent = true) {
+            Log("Initializing database...");
             MySqlConnection conn = GClass.GetNewMySqlConnection();
             conn.Open();
             new MySqlCommand("START TRANSACTION", conn).ExecuteNonQuery();
@@ -157,11 +146,11 @@ namespace SiteInteressantTester {
             r.Close();
 
             foreach (string s in tableNames) {
-                if (!silent) Console.WriteLine($"Dropping '{s}'");
+                if (verbose) Log($"Dropping '{s}'");
                 new MySqlCommand($"DROP TABLE IF EXISTS {s}",conn).ExecuteNonQuery();
             }
 
-            if (!silent) Console.WriteLine("Creating tables...");
+            if (verbose) Log("Creating tables...");
             new MySqlCommand(@"
             CREATE TABLE IF NOT EXISTS `comments` (
                 `thread_id` int(11) unsigned NOT NULL,
@@ -378,7 +367,7 @@ namespace SiteInteressantTester {
                 PRIMARY KEY (`type`,`user_id`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;",conn).ExecuteNonQuery();
 
-            if (!silent) Console.WriteLine("Populating 'users'...");
+            if (verbose) Log("Populating 'users'...");
             new MySqlCommand(@"
                 INSERT INTO `users` (`id`, `titles`, `name`, `password`, `associatedIDs`, `registration_date`, `avatar_name`, `settings`) VALUES (1, 'Administrator,oldInteressant', 'UserTest1', '.iXNOWA04NX4fLklQcJnkYQFfLhUos1.', NULL, '2023-08-01 17:26:28', NULL, '{}');
                 INSERT INTO `users` (`id`, `titles`, `name`, `password`, `associatedIDs`, `registration_date`, `avatar_name`, `settings`) VALUES (2, 'oldInteressant', 'UserTest2', '.iXNOWA04NX4fLklQcJnkYQFfLhUos1.', NULL, '2023-08-01 18:05:13', NULL, '{}');
@@ -386,10 +375,13 @@ namespace SiteInteressantTester {
                 INSERT INTO `users` (`id`, `titles`, `name`, `password`, `associatedIDs`, `registration_date`, `avatar_name`, `settings`) VALUES (4, '', 'UserTest4', '.iXNOWA04NX4fLklQcJnkYQFfLhUos1.', NULL, '2023-08-01 18:24:06', NULL, '{}');
                 INSERT INTO `users` (`id`, `titles`, `name`, `password`, `associatedIDs`, `registration_date`, `avatar_name`, `settings`) VALUES (5, '', 'UserTest5', '.iXNOWA04NX4fLklQcJnkYQFfLhUos1.', NULL, '2023-08-01 18:31:59', NULL, '{}');
             ",conn).ExecuteNonQuery();
+            API.LoginUser("UserTest5","correctpassword");
+            API.CreateThread("plop", Array.Empty<string>(), "plplplplpll");
+            API.LogoutUser();
 
             new MySqlCommand("SET FOREIGN_KEY_CHECKS = 1", conn).ExecuteNonQuery();
             new MySqlCommand("COMMIT", conn).ExecuteNonQuery();
-            if (!silent) Console.WriteLine("DB initialized.");
+            Log("DB initialized.");
         }
     }
 }
