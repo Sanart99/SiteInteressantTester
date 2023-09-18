@@ -4,7 +4,7 @@
 		<TargetFramework>net7.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
-		<StartArguments>-all -headless -width=1000 -height=1000 -log -browsers=chrome,firefox</StartArguments>
+		<StartArguments>-all -headless -width=1000 -height=1000 -log -browsers=chrome,firefox --db-name=test_siteinteressant --db-password=LwgaHpJjWpDg7L8QR2</StartArguments>
 	  
 		<NoWarn>$(NoWarn);NU1803</NoWarn>
 	</PropertyGroup>

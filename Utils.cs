@@ -18,7 +18,7 @@ namespace SiteInteressantTester {
         }
 
         public static MySqlConnection GetNewMySqlConnection() {
-            return new("Server=127.0.0.1;User ID=root;Password=LwgaHpJjWpDg7L8QR2;Database=test_siteinteressant");
+            return new($"Server={Program.DB_Host};User ID={Program.DB_Username};Password={Program.DB_Password};Database={Program.DB_Name}");
         }
 
         public static string GetRoot(string? subdomain = null) {

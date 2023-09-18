@@ -18,6 +18,11 @@ namespace SiteInteressantTester {
         public static bool UseChrome { get; private set; } = true;
         public static bool UseFirefox { get; private set; } = true;
 
+        public static string DB_Host { get; private set; } = "localhost";
+        public static string DB_Name { get; private set; } = "";
+        public static string DB_Username { get; private set; } = "root";
+        public static string DB_Password { get; private set; } = "";
+
         [GeneratedRegex(@"^-tests=(\^?(?>\w+)\$?(?:,\^?(?>\w+)\$?)*)$")]
         private static partial Regex RegexArgTests();
         [GeneratedRegex(@"^-browsers=((?:chrome|firefox)(?:,(?:chrome|firefox))*)$")]
@@ -34,6 +39,26 @@ namespace SiteInteressantTester {
                         break;
                     case "-log":
                         Logging = true;
+                        break;
+                    case var _ when new Regex(@"^--db-host").IsMatch(arg):
+                        Match mDbHost = new Regex(@"^--db-host=([^\s;]+)$").Match(arg);
+                        if (!mDbHost.Success) { Console.WriteLine("Invalid --db-host parameter."); return 1; }
+                        DB_Host = mDbHost.Groups[1].Value;
+                        break;
+                    case var _ when new Regex(@"^--db-name").IsMatch(arg):
+                        Match mDbName = new Regex(@"^--db-name=([^\s;]+)$").Match(arg);
+                        if (!mDbName.Success) { Console.WriteLine("Invalid --db-name parameter."); return 1; }
+                        DB_Name = mDbName.Groups[1].Value;
+                        break;
+                    case var _ when new Regex(@"^--db-username").IsMatch(arg):
+                        Match mDbUsername = new Regex(@"^--db-username=([^\s;]+)$").Match(arg);
+                        if (!mDbUsername.Success) { Console.WriteLine("Invalid --db-username parameter."); return 1; }
+                        DB_Username = mDbUsername.Groups[1].Value;
+                        break;
+                    case var _ when new Regex(@"^--db-password").IsMatch(arg):
+                        Match mDbPassword = new Regex(@"^--db-password=([^\s;]+)$").Match(arg);
+                        if (!mDbPassword.Success) { Console.WriteLine("Invalid --db-password parameter."); return 1; }
+                        DB_Password = mDbPassword.Groups[1].Value;
                         break;
                     case var _ when new Regex(@"^-width=\d+$").IsMatch(arg):
                         BrowserWidth = int.Parse(new Regex(@"^-width=(\d+)$").Match(arg).Groups[1].Value);
@@ -56,6 +81,10 @@ namespace SiteInteressantTester {
                         if (UseChrome == false && UseFirefox == false) { Console.WriteLine("Invalid -browsers parameter."); return 1; }
                         break;
                 }
+            }
+            if (DB_Name == "") {
+                GClass.WriteColoredLine("Specify a database name to use for testing. (use --db-name)",ConsoleColor.DarkRed);
+                return 1;
             }
 
             List<string> chromeArgs = new();
@@ -101,7 +130,7 @@ namespace SiteInteressantTester {
             }
 
             if (!API.IsServerInTestMode()) { Console.WriteLine("Server isn't in test mode."); return 1; }
-            DBInit(true);
+            if (!DBInit(true)) return 1;
             
             WebDriver driver;
             List<string> driverNames = new();
@@ -122,7 +151,7 @@ namespace SiteInteressantTester {
 
                 for (int i=0; i<driverTypes.Count; i++) {
                     if (!API.IsServerInTestMode()) { Console.WriteLine("Server isn't in test mode."); errorEncountered = true; break; }
-                    DBInit();
+                    if (!DBInit()) return 1;
 
                     string driverName = driverNames[i];
                     Console.WriteLine($"\n***** {driverName} *****");
@@ -180,12 +209,16 @@ namespace SiteInteressantTester {
             };
         }
 
-        internal static void DBInit(bool verbose = false) {
+        internal static bool DBInit(bool verbose = false) {
             static void Log(string s) { GClass.WriteColoredLine($"[DB] {s}",ConsoleColor.Cyan); }
 
             Log("Initializing database...");
             MySqlConnection conn = GClass.GetNewMySqlConnection();
-            conn.Open();
+            try { conn.Open(); } catch {
+                GClass.WriteColoredLine("Couldn't establish connection to database.",ConsoleColor.DarkRed);
+                return false;
+            }
+
             new MySqlCommand("START TRANSACTION", conn).ExecuteNonQuery();
             new MySqlCommand("SET FOREIGN_KEY_CHECKS = 0", conn).ExecuteNonQuery();
 
@@ -431,6 +464,7 @@ namespace SiteInteressantTester {
             new MySqlCommand("SET FOREIGN_KEY_CHECKS = 1", conn).ExecuteNonQuery();
             new MySqlCommand("COMMIT", conn).ExecuteNonQuery();
             Log("DB initialized.");
+            return true;
         }
     }
 }
