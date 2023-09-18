@@ -8,20 +8,23 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 
 namespace SiteInteressantTester {
-    internal class Program {
+    internal partial class Program {
         public static bool Headless { get; private set; } = false;
         public static int BrowserWidth { get; private set; } = 1000;
         public static int BrowserHeight { get; private set; } = 1000;
         public static bool Logging { get; private set; } = false;
+        public static bool All { get; private set; } = false;
+        public static List<string> TestsSelector { get; private set; } = new();
+
+        [GeneratedRegex(@"^-tests=(\^?(?>\w+)\$?(?:,\^?(?>\w+)\$?)*)$")]
+        private static partial Regex RegexArgTests();
 
         public static int Main(string[] args) {
-            if (!args.Contains("-all")) {
-                Console.WriteLine("Use '-all' to run all tests.");
-                return 0;
-            }
-
             foreach (string arg in args) {
                 switch (arg) {
+                    case "-all":
+                        All = true;
+                        break;
                     case "-headless":
                         Headless = true;
                         break;
@@ -33,6 +36,9 @@ namespace SiteInteressantTester {
                         break;
                     case var _ when new Regex(@"^-height=\d+$").IsMatch(arg):
                         BrowserHeight = int.Parse(new Regex(@"^-height=(\d+)$").Match(arg).Groups[1].Value);
+                        break;
+                    case var _ when RegexArgTests().IsMatch(arg):
+                        TestsSelector = new List<string>(RegexArgTests().Match(arg).Groups[1].Value.Split(','));
                         break;
                 }
             }
@@ -46,15 +52,37 @@ namespace SiteInteressantTester {
             firefoxArgs.Add($"-width={BrowserWidth}");
             firefoxArgs.Add($"-height={BrowserHeight}");
 
-            if (!API.IsServerInTestMode()) { Console.WriteLine("Server isn't in test mode."); return 1; }
-            DBInit(true);
-
             List<ITest> tests = new();
             IEnumerable<Type> types = Assembly.GetExecutingAssembly().GetTypes().Where(t => t.Namespace?.StartsWith("SiteInteressantTester.Test") ?? false);
-            foreach (Type t in types) {
-                if (t.FullName == "SiteInteressantTester.Test.ITest") continue;
-                if (t.GetInterface("ITest") != null) tests.Add((ITest)Activator.CreateInstance(t)!);
+            if (All) {
+                foreach (Type t in types) {
+                    if (t.FullName == "SiteInteressantTester.Test.ITest") continue;
+                    if (t.GetInterface("ITest") != null) tests.Add((ITest)Activator.CreateInstance(t)!);
+                }
+            } else if (TestsSelector.Count > 0) {
+                foreach (Type t in types) {
+                    if (t.FullName == "SiteInteressantTester.Test.ITest") continue;
+                    if (t.GetInterface("ITest") != null) foreach (string sel in TestsSelector) if (sel.Length > 0) {
+                        bool a = sel[0] == '^';
+                        bool b = sel[sel.Length-1] == '$';
+                        if (a && b) { if (t.Name == sel) tests.Add((ITest)Activator.CreateInstance(t)!); }
+                        else if (a) { if (t.Name.StartsWith(sel[1..])) tests.Add((ITest)Activator.CreateInstance(t)!); }
+                        else if (b) { if (t.Name.EndsWith(sel[..^1])) tests.Add((ITest)Activator.CreateInstance(t)!); }
+                        else if (t.Name.Contains(sel)) tests.Add((ITest)Activator.CreateInstance(t)!);
+                    }
+                }
+                if (tests.Count == 0) {
+                    GClass.WriteColoredLine("No tests found matching the parameters.", ConsoleColor.Red);
+                    return 1;
+                }
+                GClass.WriteColoredLine("Chosen tests: " + string.Join(", ", tests.Select(t => t.GetType().Name)) + "\n", ConsoleColor.Red);
+            } else {
+                Console.WriteLine("Can't use -all with -tests");
+                return 1;
             }
+
+            if (!API.IsServerInTestMode()) { Console.WriteLine("Server isn't in test mode."); return 1; }
+            DBInit(true);
             
             WebDriver driver;
             string[] driverNames = new string[] { "Chrome", "Firefox" };
