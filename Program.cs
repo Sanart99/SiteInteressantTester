@@ -15,9 +15,13 @@ namespace SiteInteressantTester {
         public static bool Logging { get; private set; } = false;
         public static bool All { get; private set; } = false;
         public static List<string> TestsSelector { get; private set; } = new();
+        public static bool UseChrome { get; private set; } = true;
+        public static bool UseFirefox { get; private set; } = true;
 
         [GeneratedRegex(@"^-tests=(\^?(?>\w+)\$?(?:,\^?(?>\w+)\$?)*)$")]
         private static partial Regex RegexArgTests();
+        [GeneratedRegex(@"^-browsers=((?:chrome|firefox)(?:,(?:chrome|firefox))*)$")]
+        private static partial Regex RegexArgBrowsers();
 
         public static int Main(string[] args) {
             foreach (string arg in args) {
@@ -40,17 +44,32 @@ namespace SiteInteressantTester {
                     case var _ when RegexArgTests().IsMatch(arg):
                         TestsSelector = new List<string>(RegexArgTests().Match(arg).Groups[1].Value.Split(','));
                         break;
+                    case var _ when new Regex(@"^-browsers").IsMatch(arg):
+                        if (!RegexArgBrowsers().IsMatch(arg)) { Console.WriteLine("Invalid -browsers parameter."); return 1; }
+
+                        UseChrome = UseFirefox = false;
+                        foreach (string s in RegexArgBrowsers().Match(arg).Groups[1].Value.Split(',')) {
+                            if (s == "firefox") { UseFirefox = true; continue; }
+                            else if (s == "chrome") { UseChrome = true; continue; }
+                        };
+
+                        if (UseChrome == false && UseFirefox == false) { Console.WriteLine("Invalid -browsers parameter."); return 1; }
+                        break;
                 }
             }
 
             List<string> chromeArgs = new();
-            if (Headless) chromeArgs.Add("--headless");
-            chromeArgs.Add($"--window-size={BrowserWidth},{BrowserHeight}");
+            if (UseChrome) {
+                if (Headless) chromeArgs.Add("--headless");
+                chromeArgs.Add($"--window-size={BrowserWidth},{BrowserHeight}");
+            }
 
             List<string> firefoxArgs = new();
-            if (Headless) firefoxArgs.Add("-headless");
-            firefoxArgs.Add($"-width={BrowserWidth}");
-            firefoxArgs.Add($"-height={BrowserHeight}");
+            if (UseFirefox) {
+                if (Headless) firefoxArgs.Add("-headless");
+                firefoxArgs.Add($"-width={BrowserWidth}");
+                firefoxArgs.Add($"-height={BrowserHeight}");
+            }
 
             List<ITest> tests = new();
             IEnumerable<Type> types = Assembly.GetExecutingAssembly().GetTypes().Where(t => t.Namespace?.StartsWith("SiteInteressantTester.Test") ?? false);
@@ -85,21 +104,23 @@ namespace SiteInteressantTester {
             DBInit(true);
             
             WebDriver driver;
-            string[] driverNames = new string[] { "Chrome", "Firefox" };
-            Type[] driverTypes = new Type[] { typeof(ChromeDriver), typeof(FirefoxDriver) };
-            List<(string,string,string)> testResults = new();
+            List<string> driverNames = new();
+            List<Type> driverTypes = new();
+            if (UseChrome) { driverNames.Add("Chrome"); driverTypes.Add(typeof(ChromeDriver)); }
+            if (UseFirefox) { driverNames.Add("Firefox"); driverTypes.Add(typeof(FirefoxDriver)); }
 
             string sNow = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss-ffff");
             string logDir = $"logs/chrome/${sNow}";
             if (Logging) Directory.CreateDirectory(logDir);
 
+            List<(string,string,string)> testResults = new();
             bool errorEncountered = false;
             foreach (ITest test in tests) {
                 string testName = test.GetType().Name;
                 Console.WriteLine("\n---------------------------");
                 GClass.WriteColoredLine($"Testing : {testName}\n", ConsoleColor.Magenta);
 
-                for (int i=0; i<2; i++) {
+                for (int i=0; i<driverTypes.Count; i++) {
                     if (!API.IsServerInTestMode()) { Console.WriteLine("Server isn't in test mode."); errorEncountered = true; break; }
                     DBInit();
 
