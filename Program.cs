@@ -138,8 +138,8 @@ namespace SiteInteressantTester {
             if (UseChrome) { driverNames.Add("Chrome"); driverTypes.Add(typeof(ChromeDriver)); }
             if (UseFirefox) { driverNames.Add("Firefox"); driverTypes.Add(typeof(FirefoxDriver)); }
 
-            string sNow = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss-ffff");
-            string logDir = $"logs/chrome/${sNow}";
+            string sNow = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
+            string logDir = $"logs/chrome/{sNow}";
             if (Logging) Directory.CreateDirectory(logDir);
 
             List<(string,string,string)> testResults = new();
