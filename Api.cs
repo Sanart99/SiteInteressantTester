@@ -54,14 +54,12 @@ namespace SiteInteressantTester {
         public static GQLResponse? LogoutUser() {
             Log("Logout User");
             string query = @"mutation LogoutUser {
-	            mutation LogoutUser {
-	                logoutUser {
-		                __typename
-		                success
-		                resultCode
-		                resultMessage
-	                }
-                }
+	            logoutUser {
+		            __typename
+		            success
+		            resultCode
+		            resultMessage
+	            }
             }";
             return SendQuery(query);
         }
