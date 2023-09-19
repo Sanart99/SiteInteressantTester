@@ -211,6 +211,7 @@ namespace SiteInteressantTester {
 
         internal static bool DBInit(bool verbose = false) {
             static void Log(string s) { GClass.WriteColoredLine($"[DB] {s}",ConsoleColor.Cyan); }
+            static void APIError() { GClass.WriteColoredLine($"[DB] Last API call failed.",ConsoleColor.DarkRed); }
 
             Log("Initializing database...");
             MySqlConnection conn = GClass.GetNewMySqlConnection();
@@ -457,9 +458,9 @@ namespace SiteInteressantTester {
                 INSERT INTO `users` (`id`, `titles`, `name`, `password`, `associatedIDs`, `registration_date`, `avatar_name`, `settings`) VALUES (4, '', 'UserTest4', '.iXNOWA04NX4fLklQcJnkYQFfLhUos1.', NULL, '2023-08-01 18:24:06', NULL, '{}');
                 INSERT INTO `users` (`id`, `titles`, `name`, `password`, `associatedIDs`, `registration_date`, `avatar_name`, `settings`) VALUES (5, '', 'UserTest5', '.iXNOWA04NX4fLklQcJnkYQFfLhUos1.', NULL, '2023-08-01 18:31:59', NULL, '{}');
             ",conn).ExecuteNonQuery();
-            API.LoginUser("UserTest5","correctpassword");
-            API.CreateThread("plop", Array.Empty<string>(), "plplplplpll");
-            API.LogoutUser();
+            if (API.LoginUser("UserTest5","correctpassword")?.Data?.LoginUser?.Success != true) { APIError(); return false; }
+            if (API.CreateThread("plop", Array.Empty<string>(), "plplplplpll")?.Data?.Forum_NewThread?.Success != true) { APIError(); return false; }
+            if (API.LogoutUser()?.Data?.LogoutUser?.Success != true) { APIError(); return false; }
 
             new MySqlCommand("SET FOREIGN_KEY_CHECKS = 1", conn).ExecuteNonQuery();
             new MySqlCommand("COMMIT", conn).ExecuteNonQuery();

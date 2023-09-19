@@ -1,6 +1,12 @@
 ﻿using System.Text.Json;
 
 namespace SiteInteressantTester {
+    internal interface IOperation {
+        public bool? Success { get; set; }
+        public string? ResultCode { get; set; }
+        public string? ResultMessage { get; set; }
+    }
+
     internal class GQLResponse {
         public GQLData? Data { get; set; }
         public double? Cost { get; set; }
@@ -8,19 +14,41 @@ namespace SiteInteressantTester {
 
     internal class GQLData {
         public bool? TestMode { get; set; }
-        public GQLThreadOperation? Forum_NewThread { get; set; }
+        public GQLOnThreadOperation? Forum_NewThread { get; set; }
+        public GQLOnRegisteredUserOperation? LoginUser { get; set; }
+        public GQLSimpleOperation? LogoutUser { get; set; }
     }
 
-    internal class GQLThreadOperation {
+    internal class GQLSimpleOperation : IOperation {
+        public bool? Success { get; set; }
+        public string? ResultCode { get; set; }
+        public string? ResultMessage { get; set; }
+    }
+
+    internal class GQLOnThreadOperation : IOperation {
         public bool? Success { get; set; }
         public string? ResultCode { get; set; }
         public string? ResultMessage { get; set; }
         public GQLThread? Thread { get; set; }
     }
 
+    internal class GQLOnRegisteredUserOperation : IOperation {
+        public bool? Success { get; set; }
+        public string? ResultCode { get; set; }
+        public string? ResultMessage { get; set; }
+        public GQLRegisteredUser? RegisteredUser { get; set; }
+    }
+
     internal class GQLThread {
         public int? DbId { get; set; }
         public int[]? FollowingIds { get; set; }
+    }
+
+    internal class GQLRegisteredUser {
+        public string? Id { get; set; }
+        public int? DbId { get; set; }
+        public string? Name { get; set; }
+        public string? AvatarURL { get; set; }
     }
 
     internal class GQLTestMode {
