@@ -8,6 +8,8 @@ namespace SiteInteressantTester.Tests.Forum {
     internal class CreateThread_Correct : ITest {
         public bool Exec(WebDriver driver) {
             WebDriverWait wait = new(driver, TimeSpan.FromSeconds(10));
+            wait.IgnoreExceptionTypes(typeof(StaleElementReferenceException));
+
             string threadTitle = "Test Title";
             string threadContent = "Test thread's content.";
 

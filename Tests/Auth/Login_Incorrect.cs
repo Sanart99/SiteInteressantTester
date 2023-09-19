@@ -7,6 +7,7 @@ namespace SiteInteressantTester.Tests.Auth {
     internal class Login_Incorrect : ITest {
         public bool Exec(WebDriver driver) {
             WebDriverWait wait = new(driver, TimeSpan.FromSeconds(10));
+            wait.IgnoreExceptionTypes(typeof(StaleElementReferenceException));
 
             driver.Navigate().GoToUrl(Home.Url);
             Home pageHome = (Home)driver.GetPageObject(typeof(Home));
