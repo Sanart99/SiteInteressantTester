@@ -102,7 +102,10 @@ namespace SiteInteressantTester {
 
             List<ITest> tests = new();
             IEnumerable<Type> types = Assembly.GetExecutingAssembly().GetTypes().Where(t => t.Namespace?.StartsWith("SiteInteressantTester.Test") ?? false);
-            if (All) {
+            if (All && TestsSelector.Count > 0) {
+                Console.WriteLine("Can't use -all with -tests");
+                return 1;
+            } else if (All) {
                 foreach (Type t in types) {
                     if (t.FullName == "SiteInteressantTester.Test.ITest") continue;
                     if (t.GetInterface("ITest") != null) tests.Add((ITest)Activator.CreateInstance(t)!);
@@ -124,9 +127,6 @@ namespace SiteInteressantTester {
                     return 1;
                 }
                 GClass.WriteColoredLine("Chosen tests: " + string.Join(", ", tests.Select(t => t.GetType().Name)) + "\n", ConsoleColor.Red);
-            } else {
-                Console.WriteLine("Can't use -all with -tests");
-                return 1;
             }
 
             if (!API.IsServerInTestMode()) { Console.WriteLine("Server isn't in test mode."); return 1; }
