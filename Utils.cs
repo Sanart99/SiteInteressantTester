@@ -6,14 +6,33 @@ using System.Text.RegularExpressions;
 
 namespace SiteInteressantTester {
     internal static class GClass {
-        public static HttpClient Http = new();
-        
+        public static HttpClientHandler HttpHandler;
+        public static HttpClient Http;
+
+        static GClass() {
+            HttpHandler = new HttpClientHandler() {
+                CookieContainer = new System.Net.CookieContainer()
+            };
+            HttpHandler.UseCookies = true;
+            Http = new(HttpHandler);
+        }
+
         public static MySqlConnection GetNewMySqlConnection() {
-            return new("Server=127.0.0.1;User ID=root;Password=LwgaHpJjWpDg7L8QR2;Database=test_siteinteressant");
+            return new($"Server={Program.DB_Host};User ID={Program.DB_Username};Password={Program.DB_Password};Database={Program.DB_Name}");
         }
 
         public static string GetRoot(string? subdomain = null) {
             return subdomain == null ? "http://local_siteinteressant.net" : $"http://{subdomain}.local_siteinteressant.net/";
+        }
+
+        internal static void WriteColoredLine(string s, ConsoleColor? fgColor = null, ConsoleColor? bgColor = null) {
+            ConsoleColor ofg = Console.ForegroundColor;
+            ConsoleColor obg = Console.BackgroundColor;
+            if (fgColor != null) Console.ForegroundColor = fgColor.Value;
+            if (bgColor != null) Console.BackgroundColor = bgColor.Value;
+            Console.WriteLine(s);
+            if (fgColor != null) Console.ForegroundColor = ofg;
+            if (bgColor != null) Console.BackgroundColor = obg;
         }
     }
 
