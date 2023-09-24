@@ -14,6 +14,7 @@ namespace SiteInteressantTester {
                 CookieContainer = new System.Net.CookieContainer()
             };
             HttpHandler.UseCookies = true;
+            HttpHandler.ServerCertificateCustomValidationCallback = (_,_,_,_) => true;
             Http = new(HttpHandler);
         }
 
@@ -22,7 +23,7 @@ namespace SiteInteressantTester {
         }
 
         public static string GetRoot(string? subdomain = null) {
-            return subdomain == null ? "http://local_siteinteressant.net" : $"http://{subdomain}.local_siteinteressant.net/";
+            return subdomain == null ? "https://local_siteinteressant.net" : $"https://{subdomain}.local_siteinteressant.net/";
         }
 
         internal static void WriteColoredLine(string s, ConsoleColor? fgColor = null, ConsoleColor? bgColor = null) {

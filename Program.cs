@@ -18,6 +18,8 @@ namespace SiteInteressantTester {
         public static bool UseChrome { get; private set; } = true;
         public static bool UseFirefox { get; private set; } = true;
 
+        public static bool DisableSSLErrors { get; private set; } = true;
+
         public static string DB_Host { get; private set; } = "localhost";
         public static string DB_Name { get; private set; } = "";
         public static string DB_Username { get; private set; } = "root";
@@ -39,6 +41,9 @@ namespace SiteInteressantTester {
                         break;
                     case "-log":
                         Logging = true;
+                        break;
+                    case "--enable-ssl-errors":
+                        DisableSSLErrors = false;
                         break;
                     case var _ when new Regex(@"^--db-host").IsMatch(arg):
                         Match mDbHost = new Regex(@"^--db-host=([^\s;]+)$").Match(arg);
@@ -89,6 +94,7 @@ namespace SiteInteressantTester {
 
             List<string> chromeArgs = new();
             if (UseChrome) {
+                if (DisableSSLErrors) chromeArgs.Add("--ignore-certificate-errors");
                 if (Headless) chromeArgs.Add("--headless");
                 chromeArgs.Add($"--window-size={BrowserWidth},{BrowserHeight}");
             }
@@ -166,6 +172,7 @@ namespace SiteInteressantTester {
                         case var v when v == typeof(FirefoxDriver):
                             FirefoxOptions optFirefox = new FirefoxOptions();
                             optFirefox.AddArguments(firefoxArgs);
+                            if (DisableSSLErrors) optFirefox.AddAdditionalOption("acceptInsecureCerts",true);
                             if (Logging) optFirefox.LogLevel = FirefoxDriverLogLevel.Trace;
                             driver = (FirefoxDriver)Activator.CreateInstance(driverTypes[i],new object[] { optFirefox })!;
                             break;
